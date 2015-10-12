@@ -198,6 +198,8 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         _leftYAxisRenderer?.renderGridLines(context: context)
         _rightYAxisRenderer?.renderGridLines(context: context)
         
+        // parkboo 151012 line chart의 dot가 앞에 그려지는 현상 방지! 밑에서 위로 옮겨옴
+        renderer!.drawExtras(context: context)
         renderer?.drawData(context: context)
         
         if (!_xAxis.isDrawLimitLinesBehindDataEnabled)
@@ -222,7 +224,6 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         // Removes clipping rectangle
         CGContextRestoreGState(context)
         
-        renderer!.drawExtras(context: context)
         
         _xAxisRenderer.renderAxisLabels(context: context)
         _leftYAxisRenderer.renderAxisLabels(context: context)
