@@ -44,6 +44,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
     
     /// Sets drawing the borders rectangle to true. If this is enabled, there is no point drawing the axis-lines of x- and y-axis.
     public var drawBordersEnabled = false
+
+    /// Sets the minimum offset (padding) around the chart, defaults to 10
+    public var minOffset = CGFloat(10.0)
     
     /// the object representing the labels on the y-axis, this object is prepared
     /// in the pepareYLabels() method
@@ -63,7 +66,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
     
     internal var _tapGestureRecognizer: UITapGestureRecognizer!
     internal var _doubleTapGestureRecognizer: UITapGestureRecognizer!
+    #if !os(tvOS)
     internal var _pinchGestureRecognizer: UIPinchGestureRecognizer!
+    #endif
     internal var _panGestureRecognizer: UIPanGestureRecognizer!
     
     /// flag that indicates if a custom viewport offset has been set
@@ -106,20 +111,23 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         _tapGestureRecognizer = UITapGestureRecognizer(target: self, action: Selector("tapGestureRecognized:"))
         _doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: Selector("doubleTapGestureRecognized:"))
         _doubleTapGestureRecognizer.numberOfTapsRequired = 2
-        _pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: Selector("pinchGestureRecognized:"))
         _panGestureRecognizer = UIPanGestureRecognizer(target: self, action: Selector("panGestureRecognized:"))
         
-        _pinchGestureRecognizer.delegate = self
         _panGestureRecognizer.delegate = self
         
         self.addGestureRecognizer(_tapGestureRecognizer)
         self.addGestureRecognizer(_doubleTapGestureRecognizer)
-        self.addGestureRecognizer(_pinchGestureRecognizer)
         self.addGestureRecognizer(_panGestureRecognizer)
         
         _doubleTapGestureRecognizer.enabled = _doubleTapToZoomEnabled
-        _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
         _panGestureRecognizer.enabled = _dragEnabled
+
+        #if !os(tvOS)
+            _pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: Selector("pinchGestureRecognized:"))
+            _pinchGestureRecognizer.delegate = self
+            self.addGestureRecognizer(_pinchGestureRecognizer)
+            _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+        #endif
     }
     
     public override func drawRect(rect: CGRect)
@@ -218,7 +226,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         // if highlighting is enabled
         if (valuesToHighlight())
         {
-            renderer?.drawHighlighted(context: context, indices: _indicesToHightlight)
+            renderer?.drawHighlighted(context: context, indices: _indicesToHighlight)
         }
 
         // Removes clipping rectangle
@@ -407,8 +415,23 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
                     || _legend.position == .BelowChartRight
                     || _legend.position == .BelowChartCenter)
                 {
-                    let yOffset = _legend.textHeightMax; // It's possible that we do not need this offset anymore as it is available through the extraOffsets
+                    // It's possible that we do not need this offset anymore as it
+                    //   is available through the extraOffsets, but changing it can mean
+                    //   changing default visibility for existing apps.
+                    let yOffset = _legend.textHeightMax
+                    
                     offsetBottom += min(_legend.neededHeight + yOffset, _viewPortHandler.chartHeight * _legend.maxSizePercent)
+                }
+                else if (_legend.position == .AboveChartLeft
+                    || _legend.position == .AboveChartRight
+                    || _legend.position == .AboveChartCenter)
+                {
+                    // It's possible that we do not need this offset anymore as it
+                    //   is available through the extraOffsets, but changing it can mean
+                    //   changing default visibility for existing apps.
+                    let yOffset = _legend.textHeightMax
+                    
+                    offsetTop += min(_legend.neededHeight + yOffset, _viewPortHandler.chartHeight * _legend.maxSizePercent)
                 }
             }
             
@@ -447,14 +470,12 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
             offsetRight += self.extraRightOffset
             offsetBottom += self.extraBottomOffset
             offsetLeft += self.extraLeftOffset
-            
-            let minOffset = CGFloat(10.0)
-            
+
             _viewPortHandler.restrainViewPort(
-                offsetLeft: max(minOffset, offsetLeft),
-                offsetTop: max(minOffset, offsetTop),
-                offsetRight: max(minOffset, offsetRight),
-                offsetBottom: max(minOffset, offsetBottom))
+                offsetLeft: max(self.minOffset, offsetLeft),
+                offsetTop: max(self.minOffset, offsetTop),
+                offsetRight: max(self.minOffset, offsetRight),
+                offsetBottom: max(self.minOffset, offsetBottom))
         }
         
         prepareOffsetMatrix()
@@ -658,6 +679,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         }
     }
     
+    #if !os(tvOS)
     @objc private func pinchGestureRecognized(recognizer: UIPinchGestureRecognizer)
     {
         if (recognizer.state == UIGestureRecognizerState.Began)
@@ -743,6 +765,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
             }
         }
     }
+    #endif
     
     @objc private func panGestureRecognized(recognizer: UIPanGestureRecognizer)
     {
@@ -757,8 +780,10 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
                 _closestDataSetToTouch = getDataSetByTouchPoint(recognizer.locationOfTouch(0, inView: self))
                 
                 let translation = recognizer.translationInView(self)
+                let didUserDrag = (self is HorizontalBarChartView) ? translation.y != 0.0 : translation.x != 0.0 
                 
-                if (!performPanChange(translation: translation))
+                // Check to see if user dragged at all and if so, can the chart be dragged by the given amount
+                if (didUserDrag && !performPanChange(translation: translation))
                 {
                     if (_outerScrollView !== nil)
                     {
@@ -919,12 +944,17 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
                 return false
             }
         }
-        else if (gestureRecognizer == _pinchGestureRecognizer)
+        else
         {
-            if (_dataNotSet || (!_pinchZoomEnabled && !_scaleXEnabled && !_scaleYEnabled))
-            {
-                return false
-            }
+            #if !os(tvOS)
+                if (gestureRecognizer == _pinchGestureRecognizer)
+                {
+                    if (_dataNotSet || (!_pinchZoomEnabled && !_scaleXEnabled && !_scaleYEnabled))
+                    {
+                        return false
+                    }
+                }
+            #endif
         }
         
         return true
@@ -932,6 +962,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
     
     public func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWithGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool
     {
+        #if !os(tvOS)
         if ((gestureRecognizer.isKindOfClass(UIPinchGestureRecognizer) &&
             otherGestureRecognizer.isKindOfClass(UIPanGestureRecognizer)) ||
             (gestureRecognizer.isKindOfClass(UIPanGestureRecognizer) &&
@@ -939,6 +970,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         {
             return true
         }
+        #endif
         
         if (gestureRecognizer.isKindOfClass(UIPanGestureRecognizer) &&
             otherGestureRecognizer.isKindOfClass(UIPanGestureRecognizer) && (
@@ -1258,7 +1290,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         {
             _scaleXEnabled = enabled
             _scaleYEnabled = enabled
-            _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+            #if !os(tvOS)
+                _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+            #endif
         }
     }
     
@@ -1273,7 +1307,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
             if (_scaleXEnabled != newValue)
             {
                 _scaleXEnabled = newValue
-                _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #if !os(tvOS)
+                    _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #endif
             }
         }
     }
@@ -1289,7 +1325,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
             if (_scaleYEnabled != newValue)
             {
                 _scaleYEnabled = newValue
-                _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #if !os(tvOS)
+                    _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #endif
             }
         }
     }
@@ -1482,7 +1520,7 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
         return _xAxis
     }
     
-    /// flag that indicates if pinch-zoom is enabled. if true, both x and y axis can be scaled with 2 fingers, if false, x and y axis can be scaled separately
+    /// flag that indicates if pinch-zoom is enabled. if true, both x and y axis can be scaled simultaneously with 2 fingers, if false, x and y axis can be scaled separately
     public var pinchZoomEnabled: Bool
     {
         get
@@ -1494,7 +1532,9 @@ public class BarLineChartViewBase: ChartViewBase, UIGestureRecognizerDelegate
             if (_pinchZoomEnabled != newValue)
             {
                 _pinchZoomEnabled = newValue
-                _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #if !os(tvOS)
+                    _pinchGestureRecognizer.enabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
+                #endif
             }
         }
     }
