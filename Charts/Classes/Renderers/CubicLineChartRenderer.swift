@@ -1,25 +1,20 @@
 //
-//  LineChartRenderer.swift
+//  CubicLineChartRenderer.swift
 //  Charts
 //
-//  Created by Daniel Cohen Gindi on 4/3/15.
-//
-//  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
-//  A port of MPAndroidChart for iOS
-//  Licensed under Apache License 2.0
-//
-//  https://github.com/danielgindi/ios-charts
+//  Created by Booyoung Park on 2015. 11. 11..
+//  Copyright © 2015년 dcg. All rights reserved.
 //
 
 import Foundation
 import CoreGraphics
 import UIKit
 
-public class LineChartRenderer: LineScatterCandleRadarChartRenderer
+public class CubicLineChartRenderer: LineScatterCandleRadarChartRenderer
 {
-    public weak var dataProvider: LineChartDataProvider?
+    public weak var dataProvider: CubicLineChartDataProvider?
     
-    public init(dataProvider: LineChartDataProvider?, animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler)
+    public init(dataProvider: CubicLineChartDataProvider?, animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler)
     {
         super.init(animator: animator, viewPortHandler: viewPortHandler)
         
@@ -28,18 +23,15 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
     
     public override func drawData(context context: CGContext)
     {
-        let a = dataProvider;
-        let b = dataProvider?.lineData;
+        guard let cubicData = dataProvider?.cubicData else { return }
         
-        guard let lineData = dataProvider?.lineData else { return }
-        
-        for (var i = 0; i < lineData.dataSetCount; i++)
+        for (var i = 0; i < cubicData.dataSetCount; i++)
         {
-            guard let set = lineData.getDataSetByIndex(i) else { continue }
+            guard let set = cubicData.getDataSetByIndex(i) else { continue }
             
             if set.isVisible
             {
-                drawDataSet(context: context, dataSet: set as! LineChartDataSet)
+                drawDataSet(context: context, dataSet: set as! CubicLineChartDataSet)
             }
         }
     }
@@ -61,7 +53,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         }
     }
     
-    internal func drawDataSet(context context: CGContext, dataSet: LineChartDataSet)
+    internal func drawDataSet(context context: CGContext, dataSet: CubicLineChartDataSet)
     {
         let entries = dataSet.yVals
         
@@ -95,7 +87,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         CGContextRestoreGState(context)
     }
     
-    internal func drawCubic(context context: CGContext, dataSet: LineChartDataSet, entries: [ChartDataEntry])
+    internal func drawCubic(context context: CGContext, dataSet: CubicLineChartDataSet, entries: [ChartDataEntry])
     {
         let trans = dataProvider?.getTransformer(dataSet.axisDependency)
         
@@ -199,7 +191,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         CGContextRestoreGState(context)
     }
     
-    internal func drawCubicFill(context context: CGContext, dataSet: LineChartDataSet, spline: CGMutablePath, matrix: CGAffineTransform, from: Int, to: Int)
+    internal func drawCubicFill(context context: CGContext, dataSet: CubicLineChartDataSet, spline: CGMutablePath, matrix: CGAffineTransform, from: Int, to: Int)
     {
         guard let dataProvider = dataProvider else { return }
         
@@ -210,7 +202,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         
         CGContextSaveGState(context)
         
-        let fillMin = dataSet.fillFormatter?.getFillLinePosition(dataSet: dataSet, dataProvider: dataProvider) ?? 0.0
+        let fillMin = dataSet.fillFormatter?.getCubicFillLinePosition(dataSet: dataSet, dataProvider: dataProvider) ?? 0.0
         
         var pt1 = CGPoint(x: CGFloat(to - 1), y: fillMin)
         var pt2 = CGPoint(x: CGFloat(from), y: fillMin)
@@ -232,7 +224,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
     
     private var _lineSegments = [CGPoint](count: 2, repeatedValue: CGPoint())
     
-    internal func drawLinear(context context: CGContext, dataSet: LineChartDataSet, entries: [ChartDataEntry])
+    internal func drawLinear(context context: CGContext, dataSet: CubicLineChartDataSet, entries: [ChartDataEntry])
     {
         guard let trans = dataProvider?.getTransformer(dataSet.axisDependency) else { return }
         let valueToPixelMatrix = trans.valueToPixelMatrix
@@ -338,7 +330,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         }
     }
     
-    internal func drawLinearFill(context context: CGContext, dataSet: LineChartDataSet, entries: [ChartDataEntry], minx: Int, maxx: Int, trans: ChartTransformer)
+    internal func drawLinearFill(context context: CGContext, dataSet: CubicLineChartDataSet, entries: [ChartDataEntry], minx: Int, maxx: Int, trans: ChartTransformer)
     {
         guard let dataProvider = dataProvider else { return }
         
@@ -351,7 +343,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         
         let filled = generateFilledPath(
             entries,
-            fillMin: dataSet.fillFormatter?.getFillLinePosition(dataSet: dataSet, dataProvider: dataProvider) ?? 0.0,
+            fillMin: dataSet.fillFormatter?.getCubicFillLinePosition(dataSet: dataSet, dataProvider: dataProvider) ?? 0.0,
             from: minx,
             to: maxx,
             matrix: trans.valueToPixelMatrix)
@@ -389,11 +381,11 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
     
     public override func drawValues(context context: CGContext)
     {
-        guard let dataProvider = dataProvider, lineData = dataProvider.lineData else { return }
+        guard let dataProvider = dataProvider, cubicData = dataProvider.cubicData else { return }
         
-        if (CGFloat(lineData.yValCount) < CGFloat(dataProvider.maxVisibleValueCount) * viewPortHandler.scaleX)
+        if (CGFloat(cubicData.yValCount) < CGFloat(dataProvider.maxVisibleValueCount) * viewPortHandler.scaleX)
         {
-            var dataSets = lineData.dataSets
+            var dataSets = cubicData.dataSets
             
             for (var i = 0; i < dataSets.count; i++)
             {
@@ -462,12 +454,12 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
     
     private func drawCircles(context context: CGContext)
     {
-        guard let dataProvider = dataProvider, lineData = dataProvider.lineData else { return }
+        guard let dataProvider = dataProvider, cubicData = dataProvider.cubicData else { return }
         
         let phaseX = _animator.phaseX
         let phaseY = _animator.phaseY
         
-        let dataSets = lineData.dataSets
+        let dataSets = cubicData.dataSets
         
         var pt = CGPoint()
         var rect = CGRect()
@@ -476,7 +468,7 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
         
         for (var i = 0, count = dataSets.count; i < count; i++)
         {
-            let dataSet = lineData.getDataSetByIndex(i) as! LineChartDataSet!
+            let dataSet = cubicData.getDataSetByIndex(i) as! CubicLineChartDataSet!
             
             if !dataSet.isVisible || !dataSet.isDrawCirclesEnabled || dataSet.entryCount == 0
             {
@@ -547,13 +539,13 @@ public class LineChartRenderer: LineScatterCandleRadarChartRenderer
     
     public override func drawHighlighted(context context: CGContext, indices: [ChartHighlight])
     {
-        guard let lineData = dataProvider?.lineData, chartXMax = dataProvider?.chartXMax else { return }
+        guard let cubicData = dataProvider?.cubicData, chartXMax = dataProvider?.chartXMax else { return }
         
         CGContextSaveGState(context)
         
         for (var i = 0; i < indices.count; i++)
         {
-            guard let set = lineData.getDataSetByIndex(indices[i].dataSetIndex) as? LineChartDataSet else { continue }
+            guard let set = cubicData.getDataSetByIndex(indices[i].dataSetIndex) as? CubicLineChartDataSet else { continue }
             
             if !set.isHighlightEnabled
             {

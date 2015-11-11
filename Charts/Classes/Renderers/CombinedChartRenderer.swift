@@ -29,7 +29,7 @@ public class CombinedChartRenderer: ChartDataRendererBase
     
     internal var _renderers = [ChartDataRendererBase]()
     
-    internal var _drawOrder: [CombinedChartView.CombinedChartDrawOrder] = [.Bar, .Bubble, .Line, .Candle, .Scatter]
+    internal var _drawOrder: [CombinedChartView.CombinedChartDrawOrder] = [.Bar, .Bubble, .Line, .Candle, .Scatter, .Cubic]
     
     public init(chart: CombinedChartView, animator: ChartAnimator, viewPortHandler: ChartViewPortHandler)
     {
@@ -81,6 +81,13 @@ public class CombinedChartRenderer: ChartDataRendererBase
                 if (_chart.bubbleData !== nil)
                 {
                     _renderers.append(BubbleChartRenderer(dataProvider: _chart, animator: _animator, viewPortHandler: viewPortHandler))
+                }
+                break
+
+            case .Cubic:
+                if (_chart.cubicData !== nil)
+                {
+                    _renderers.append(CubicLineChartRenderer(dataProvider: _chart, animator: _animator, viewPortHandler: viewPortHandler))
                 }
                 break
             }

@@ -20,6 +20,7 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
     private var _scatterData: ScatterChartData!
     private var _candleData: CandleChartData!
     private var _bubbleData: BubbleChartData!
+    private var _cubicData: CubicLineChartData!
     
     public override init()
     {
@@ -155,7 +156,31 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
             calcXValAverageLength()
         }
     }
-    
+
+    public var cubicData: CubicLineChartData!
+        {
+        get
+        {
+            return _cubicData
+        }
+        set
+        {
+            _cubicData = newValue
+            for dataSet in newValue.dataSets
+            {
+                _dataSets.append(dataSet)
+            }
+            
+            checkIsLegal(newValue.dataSets)
+            
+            calcMinMax(start: _lastStart, end: _lastEnd)
+            calcYValueSum()
+            calcYValueCount()
+            
+            calcXValAverageLength()
+        }
+    }
+
     /// - returns: all data objects in row: line-bar-scatter-candle-bubble if not null.
     public var allData: [ChartData]
     {
@@ -180,6 +205,10 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
         if bubbleData !== nil
         {
             data.append(bubbleData)
+        }
+        if cubicData !== nil
+        {
+            data.append(cubicData)
         }
         
         return data;
@@ -206,6 +235,10 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
         if (_bubbleData !== nil)
         {
             _bubbleData.notifyDataChanged()
+        }
+        if (_cubicData !== nil)
+        {
+            _cubicData.notifyDataChanged()
         }
         
         super.notifyDataChanged() // recalculate everything
