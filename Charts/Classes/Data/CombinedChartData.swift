@@ -21,6 +21,7 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
     private var _candleData: CandleChartData!
     private var _bubbleData: BubbleChartData!
     private var _cubicData: CubicLineChartData!
+    private var _customBar1Data: CustomBar1ChartData!
     
     public override init()
     {
@@ -166,6 +167,30 @@ public class CombinedChartData: BarLineScatterCandleBubbleChartData
         set
         {
             _cubicData = newValue
+            for dataSet in newValue.dataSets
+            {
+                _dataSets.append(dataSet)
+            }
+            
+            checkIsLegal(newValue.dataSets)
+            
+            calcMinMax(start: _lastStart, end: _lastEnd)
+            calcYValueSum()
+            calcYValueCount()
+            
+            calcXValAverageLength()
+        }
+    }
+    
+    public var customBar1Data: CustomBar1ChartData!
+        {
+        get
+        {
+            return _customBar1Data
+        }
+        set
+        {
+            _customBar1Data = newValue
             for dataSet in newValue.dataSets
             {
                 _dataSets.append(dataSet)

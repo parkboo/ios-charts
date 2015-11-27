@@ -15,7 +15,7 @@ import Foundation
 import CoreGraphics
 
 /// This chart class allows the combination of lines, bars, scatter and candle data all displayed in one chart area.
-public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, BarChartDataProvider, ScatterChartDataProvider, CandleChartDataProvider, BubbleChartDataProvider, CubicLineChartDataProvider
+public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, BarChartDataProvider, ScatterChartDataProvider, CandleChartDataProvider, BubbleChartDataProvider, CubicLineChartDataProvider, CustomBar1ChartDataProvider
 {
     /// the fill-formatter used for determining the position of the fill-line
     internal var _fillFormatter: ChartFillFormatter!
@@ -30,6 +30,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         case Candle
         case Scatter
         case Cubic
+        case CustomBar1
     }
     
     public override func initialize()
@@ -199,6 +200,20 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         }
     }
 
+    // MARK: - CustomBar1ChartDataProvider
+    
+    public var customBar1Data: CustomBar1ChartData?
+        {
+        get
+        {
+            if (_data === nil)
+            {
+                return nil
+            }
+            return (_data as! CombinedChartData!).customBar1Data
+        }
+    }
+    
     // MARK: - Accessors
     
     /// flag that enables or disables the highlighting arrow
